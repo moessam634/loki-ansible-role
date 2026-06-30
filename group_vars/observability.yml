@@ -1,0 +1,6 @@
+---
+# group_vars/observability.yml
+loki_install_docker: true       # let the role install Docker on these hosts
+loki_version: "2.9.8"
+loki_retention_period: "168h"   # 7 days, shorter for this environment
+loki_memory_limit: "1g"

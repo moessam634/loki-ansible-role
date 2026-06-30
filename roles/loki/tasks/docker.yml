@@ -1,0 +1,64 @@
+---
+# ----------------------------------------------------------------------------
+# roles/loki/tasks/docker.yml
+# Installs Docker Engine + Compose plugin from Docker's official apt repo.
+# Only runs when loki_install_docker: true. For multi-role environments,
+# prefer a dedicated role (e.g. geerlingguy.docker) instead and skip this.
+# ----------------------------------------------------------------------------
+
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+    force: false
+
+- name: Add Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ loki_docker_apt_arch }} signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    state: present
+    filename: docker
+    update_cache: true
+
+- name: Install Docker Engine and Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: Ensure docker service is enabled and running
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+
+      #- name: Ensure python docker SDK is present (for community.docker modules)
+      #  ansible.builtin.pip:
+      # name: docker
+      #state: present
+      # executable: pip3
+      #
+- name: Ensure python docker SDK is present (for community.docker modules)
+  ansible.builtin.apt:
+    name: python3-docker
+    state: present

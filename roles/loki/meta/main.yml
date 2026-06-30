@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: memohamed634
+  description: Deploys Grafana Loki via Docker Compose on Ubuntu hosts
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy   # 22.04
+        - noble   # 24.04
+  galaxy_tags:
+    - loki
+    - grafana
+    - observability
+    - logging
+    - docker
+    - monitoring
+
+dependencies: []
+
+collections:
+  - community.docker

@@ -1,0 +1,73 @@
+---
+# Managed by Ansible - roles/loki/templates/loki-config.yml.j2
+# Reference: https://grafana.com/docs/loki/latest/configure/
+
+auth_enabled: {{ loki_auth_enabled | lower }}
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+ingester:
+  chunk_idle_period: {{ loki_ingester_chunk_idle_period }}
+  max_chunk_age: {{ loki_ingester_max_chunk_age }}
+  chunk_target_size: 1048576
+  chunk_retain_period: 30s
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: {{ loki_schema_store }}
+      object_store: filesystem
+      schema: v{{ loki_schema_v }}
+      index:
+        prefix: index_
+        period: 24h
+
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: {{ loki_retention_enabled | lower }}
+  retention_delete_delay: 2h
+  delete_request_store: filesystem
+
+limits_config:
+  retention_period: {{ loki_retention_period }}
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  max_cache_freshness_per_query: 10m
+  ingestion_rate_mb: 8
+  ingestion_burst_size_mb: 16
+
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /loki/rules
+  rule_path: /tmp/loki/rules-temp
+  alertmanager_url: ""
+  ring:
+    kvstore:
+      store: inmemory
+  enable_api: true
+
+analytics:
+  reporting_enabled: false
+
+{% if loki_extra_config %}
+# --- Extra config merged in from loki_extra_config ---
+{{ loki_extra_config | to_nice_yaml }}
+{% endif %}

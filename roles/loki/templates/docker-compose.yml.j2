@@ -1,0 +1,49 @@
+services:
+  loki:
+    image: "{{ loki_image }}:{{ loki_version }}"
+    container_name: "{{ loki_container_name }}"
+    restart: "{{ loki_restart_policy }}"
+    user: "{{ loki_uid }}:{{ loki_gid }}"
+    command: -config.file=/etc/loki/config.yaml
+    ports:
+      - "{{ loki_bind_address }}:{{ loki_http_port }}:3100"
+      - "{{ loki_bind_address }}:{{ loki_grpc_port }}:9096"
+    volumes:
+      - "{{ loki_config_dir }}/config.yaml:/etc/loki/config.yaml:ro"
+      - "{{ loki_data_dir }}:/loki"
+    networks:
+      - "{{ loki_network_name }}"
+    env_file:
+      - .env
+{% if loki_extra_env %}
+    environment:
+{% for key, value in loki_extra_env.items() %}
+      - "{{ key }}={{ value }}"
+{% endfor %}
+{% endif %}
+    logging:
+      driver: json-file
+      options:
+        max-size: "{{ loki_log_max_size }}"
+        max-file: "{{ loki_log_max_file }}"
+    deploy:
+      resources:
+        limits:
+          cpus: "{{ loki_cpus }}"
+          memory: "{{ loki_memory_limit }}"
+        reservations:
+          memory: "{{ loki_memory_reservation }}"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  {{ loki_network_name }}:
+{% if loki_network_external %}
+    external: true
+{% else %}
+    driver: bridge
+{% endif %}

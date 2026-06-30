@@ -1,0 +1,11 @@
+---
+# ----------------------------------------------------------------------------
+# roles/loki/handlers/main.yml
+# ----------------------------------------------------------------------------
+
+- name: Restart loki
+  community.docker.docker_compose_v2:
+    project_src: "{{ loki_compose_dir }}"
+    project_name: "{{ loki_compose_project_name }}"
+    state: restarted
+  listen: Restart loki

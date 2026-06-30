@@ -1,0 +1,97 @@
+---
+# ----------------------------------------------------------------------------
+# roles/loki/tasks/main.yml
+# ----------------------------------------------------------------------------
+
+- name: Assert supported OS family
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+    fail_msg: "This role currently targets Ubuntu only (got {{ ansible_distribution }})."
+    quiet: true
+
+- name: Install Docker Engine and Compose plugin
+  ansible.builtin.include_tasks: docker.yml
+  when: loki_install_docker | bool
+
+- name: Verify docker and docker compose are available
+  ansible.builtin.command: docker compose version
+  register: _docker_compose_check
+  changed_when: false
+  failed_when: _docker_compose_check.rc != 0
+
+- name: Create loki system group
+  ansible.builtin.group:
+    name: loki
+    gid: "{{ loki_gid }}"
+    system: true
+    state: present
+
+- name: Create loki system user
+  ansible.builtin.user:
+    name: loki
+    uid: "{{ loki_uid }}"
+    group: loki
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    state: present
+
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ loki_uid }}"
+    group: "{{ loki_gid }}"
+    mode: "0750"
+  loop:
+    - "{{ loki_base_dir }}"
+    - "{{ loki_config_dir }}"
+    - "{{ loki_data_dir }}"
+    - "{{ loki_data_dir }}/chunks"
+    - "{{ loki_data_dir }}/rules"
+    - "{{ loki_data_dir }}/compactor"
+
+- name: Render loki configuration file
+  ansible.builtin.template:
+    src: loki-config.yml.j2
+    dest: "{{ loki_config_dir }}/config.yaml"
+    owner: "{{ loki_uid }}"
+    group: "{{ loki_gid }}"
+    mode: "0640"
+  notify: Restart loki
+
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ loki_compose_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0640"
+  register: _compose_file
+
+- name: Render environment file for compose
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ loki_compose_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0640"
+  register: _env_file
+
+- name: Pull loki image and (re)create container
+  community.docker.docker_compose_v2:
+    project_src: "{{ loki_compose_dir }}"
+    project_name: "{{ loki_compose_project_name }}"
+    state: present
+    pull: "always"
+  register: _compose_up
+
+- name: Wait for Loki readiness endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ loki_http_port }}/ready"
+    status_code: 200
+  register: _loki_ready
+  until: _loki_ready.status == 200
+  retries: 15
+  delay: 4

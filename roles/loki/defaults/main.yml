@@ -1,0 +1,60 @@
+---
+# ----------------------------------------------------------------------------
+# roles/loki/defaults/main.yml
+# Override any of these in group_vars/host_vars or at playbook level.
+# ----------------------------------------------------------------------------
+
+# --- Image / version -----------------------------------------------------
+loki_image: "grafana/loki"
+loki_version: "2.9.8"          # pin a real tag, never "latest" in prod
+
+# --- Whether this role should also install Docker Engine ------------------
+# Set to false if Docker is already managed by another role (recommended:
+# geerlingguy.docker as a separate, dedicated dependency).
+loki_install_docker: false
+loki_docker_apt_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+
+# --- Filesystem layout on the target host ----------------------------------
+loki_base_dir: /opt/loki
+loki_config_dir: "{{ loki_base_dir }}/config"
+loki_data_dir: "{{ loki_base_dir }}/data"
+loki_compose_dir: "{{ loki_base_dir }}"
+
+# --- Container identity -----------------------------------------------------
+loki_container_name: loki
+loki_compose_project_name: loki
+loki_network_name: loki_net
+loki_network_external: false   # set true + loki_network_name if joining an existing network (e.g. shared with Grafana/Promtail)
+
+# Loki's official image runs as this non-root UID/GID by default.
+loki_uid: 10001
+loki_gid: 10001
+
+# --- Networking ---------------------------------------------------------
+loki_http_port: 3100
+loki_grpc_port: 9096
+loki_bind_address: "0.0.0.0"   # set to 127.0.0.1 if fronting with a reverse proxy
+
+# --- Runtime behaviour -----------------------------------------------------
+loki_restart_policy: unless-stopped   # no | always | on-failure | unless-stopped
+loki_log_max_size: "10m"
+loki_log_max_file: "3"
+loki_memory_limit: "512m"
+loki_memory_reservation: "128m"
+loki_cpus: "1.0"
+
+# --- Loki application config (rendered into config.yaml) -------------------
+loki_auth_enabled: false
+loki_retention_enabled: true
+loki_retention_period: "744h"        # 31 days
+loki_ingester_chunk_idle_period: "30m"
+loki_ingester_max_chunk_age: "1h"
+loki_schema_store: "tsdb"            # tsdb is the current recommended index store
+loki_schema_v: "13"
+
+# Extra raw YAML block merged into the rendered config for advanced users
+# (e.g. S3 storage backend, alerting ruler, etc). Leave empty for local filesystem.
+loki_extra_config: {}
+
+# Extra environment variables passed to the container
+loki_extra_env: {}

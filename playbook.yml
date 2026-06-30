@@ -1,0 +1,9 @@
+---
+# playbook.yml
+- name: Deploy Grafana Loki via Docker Compose
+  hosts: observability
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: loki
