@@ -52,12 +52,6 @@
     state: started
     enabled: true
 
-      #- name: Ensure python docker SDK is present (for community.docker modules)
-      #  ansible.builtin.pip:
-      # name: docker
-      #state: present
-      # executable: pip3
-      #
 - name: Ensure python docker SDK is present (for community.docker modules)
   ansible.builtin.apt:
     name: python3-docker
